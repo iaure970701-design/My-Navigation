@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>我的导航</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;
+    background:#f7f8fa;
+    color:#1f2328;padding:24px 16px 60px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:1100px;margin:0 auto}
+
+  header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+         justify-content:space-between;margin-bottom:18px}
+  h1{font-size:17px;font-weight:600;margin:0;letter-spacing:.4px;color:#1f2328}
+
+  .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  input[type="search"]{
+    background:#fff;border:1px solid #d8dce2;color:#1f2328;
+    padding:7px 11px;border-radius:8px;font-size:13px;outline:none;
+    font-family:inherit;transition:.15s;
+  }
+  input[type="search"]:focus{border-color:#4f8cff;box-shadow:0 0 0 3px rgba(79,140,255,.15)}
+  #search{width:190px; flex-shrink: 0;}
+
+  .action-btns {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  button{
+    font:inherit;cursor:pointer;border-radius:8px;border:1px solid #d8dce2;
+    background:#fff;color:#1f2328;padding:7px 12px;font-size:13px;transition:.15s;
+    white-space:nowrap;
+  }
+  button:hover{background:#f0f2f5;border-color:#c9ced6}
+  button.primary{background:#4f8cff;border-color:#4f8cff;color:#fff}
+  button.primary:hover{background:#3d7bf0}
+  button:disabled{opacity:.6;cursor:not-allowed}
+
+  #settingsBtn{padding:7px 10px;font-size:14px;line-height:1}
+
+  #importFile{display:none}
+
+  #grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(84px,1fr));
+    gap:20px 8px;
+  }
+  .card{position:relative;padding-bottom:22px}
+
+  .card a{
+    display:flex;flex-direction:column;align-items:center;
+    gap:7px;padding:4px 0 2px;
+    text-decoration:none;color:inherit;
+    -webkit-touch-callout:none;
+    user-select:none;-webkit-user-select:none;
+    transition: transform .15s;
+  }
+
+  .icon{
+    position:relative;width:52px;height:52px;border-radius:50%;flex:none;
+    display:grid;place-items:center;overflow:hidden;
+    transition:transform .15s, box-shadow .15s;
+  }
+  .icon-letter{font-weight:600;font-size:20px;line-height:1}
+  .favicon{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:contain;padding:7px;z-index:2;
+  }
+  .name{
+    font-size:12px;line-height:1.2;width:100%;text-align:center;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:#1f2328;padding:0 2px;
+  }
+
+  .card:not(.is-editing):hover .icon{
+    transform:translateY(-2px);
+    box-shadow:0 6px 16px rgba(0,0,0,.12);
+  }
+
+  @keyframes shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-2deg); }
+    75% { transform: rotate(2deg); }
+    100% { transform: rotate(0deg); }
+  }
+  .editing .card a {
+    animation: shake .3s infinite alternate;
+    pointer-events: none;
+  }
+
+  .btn-del{
+    position:absolute;top:-4px;right:4px;z-index:10;
+    width:22px;height:22px;border-radius:50%;
+    background:#ff3b30;color:#fff;border:2px solid #fff;
+    display:none;place-items:center;
+    font-size:14px;line-height:1;font-weight:bold;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+    cursor:pointer;padding:0;
+  }
+  .sort-actions{
+    position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+    display:none;gap:4px;z-index:10;
+  }
+  .sort-actions button{
+    width:24px;height:24px;border-radius:50%;padding:0;
+    background:#fff;border:1px solid #d8dce2;
+    display:grid;place-items:center;font-size:12px;color:#555;
+    box-shadow:0 2px 4px rgba(0,0,0,.05);
+  }
+  .sort-actions button:active{background:#f0f2f5}
+
+  .editing .card .btn-del,
+  .editing .card .sort-actions{display:grid}
+  .editing .card .sort-actions{display:flex}
+  .card:first-child .btn-left { visibility: hidden; }
+  .card:last-child .btn-right { visibility: hidden; }
+
+  .editing .card .icon { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+
+  .empty{grid-column:1/-1;text-align:center;color:#8b93a7;padding:48px 0;font-size:13px}
+  footer{margin-top:28px;text-align:center;color:#9aa3b2;font-size:12px}
+
+  .gh-status{display:block;margin-top:4px;font-size:11px}
+
+  dialog{
+    border:1px solid #e0e3e8;background:#fff;color:#1f2328;
+    border-radius:14px;padding:18px;width:min(92vw,380px);
+    box-shadow:0 20px 50px rgba(0,0,0,.15);
+  }
+  dialog::backdrop{background:rgba(15,17,21,.45);backdrop-filter:blur(2px)}
+  dialog h3{margin:0 0 12px;font-size:15px;font-weight:600}
+  dialog label{display:block;font-size:13px;color:#6b7280;margin-bottom:12px}
+  dialog label input{display:block;width:100%;margin-top:6px}
+  dialog input{
+    background:#fff;border:1px solid #d8dce2;color:#1f2328;
+    padding:7px 11px;border-radius:8px;font-size:13px;outline:none;
+    font-family:inherit;transition:.15s;
+  }
+  dialog input:focus{border-color:#4f8cff;box-shadow:0 0 0 3px rgba(79,140,255,.15)}
+  .hint{font-size:12px;color:#8b93a7;line-height:1.55;margin:0 0 14px}
+  .dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;flex-wrap:wrap}
+  .dlg-actions #settingsTest{margin-right:auto}
+
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:#1f2328;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:1000;
+    box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width: 520px){
+    body{padding:16px 12px 40px}
+    #grid{grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:16px 6px}
+    .icon{width:46px;height:46px}
+    .icon-letter{font-size:18px}
+    .favicon{padding:6px}
+    .name{font-size:11px}
+    .btn-del{width:20px;height:20px;font-size:12px;right:0}
+
+    .tools { width: 100%; }
+    #search { width: 100%; }
+    .action-btns{flex-wrap:wrap;justify-content:flex-end}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🧭 我的导航</h1>
+    <div class="tools">
+      <input id="search" type="search" placeholder="搜索站点…（按 / 聚焦）">
+      <div class="action-btns">
+        <button id="importBtn" title="从 GitHub 导入（取消则从本地文件导入）">↑ 导入</button>
+        <button id="exportBtn" title="同步到 GitHub（取消则下载到本地）">↓ 导出</button>
+        <button id="addBtn" class="primary">+ 添加网址</button>
+        <button id="settingsBtn" title="GitHub 同步设置">⚙️</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json">
+    </div>
+  </header>
+
+  <main id="grid"></main>
+  <footer>
+    长按卡片进入编辑模式 · 数据保存在本机，建议定期导出备份
+    <span id="ghStatus" class="gh-status"></span>
+  </footer>
+</div>
+
+<!-- 添加/编辑网址 -->
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <h3 id="dlgTitle">添加网址</h3>
+    <label>名称
+      <input id="fName" required maxlength="30" placeholder="例如：百度" autocomplete="off">
+    </label>
+    <label>网址
+      <input id="fUrl" required placeholder="例如：www.baidu.com" autocomplete="off">
+    </label>
+    <div class="dlg-actions">
+      <button type="button" id="cancelBtn">取消</button>
+      <button class="primary" value="ok">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- GitHub 同步设置 -->
+<dialog id="settingsDlg">
+  <form method="dialog" id="settingsForm">
+    <h3>GitHub 同步设置</h3>
+    <p class="hint">
+      Token 仅保存在本机浏览器 localStorage，不会提交到仓库。<br>
+      建议创建 Fine-grained PAT，只授予目标仓库的 Contents 读写权限。
+    </p>
+    <label>用户名 / Owner
+      <input id="gOwner" placeholder="例如：octocat" autocomplete="off">
+    </label>
+    <label>仓库名
+      <input id="gRepo" placeholder="例如：my-nav" autocomplete="off">
+    </label>
+    <label>分支
+      <input id="gBranch" placeholder="main" autocomplete="off">
+    </label>
+    <label>文件路径
+      <input id="gPath" placeholder="links.json" autocomplete="off">
+    </label>
+    <label>Personal Access Token
+      <input id="gToken" type="password" placeholder="ghp_… 或 github_pat_…" autocomplete="off">
+    </label>
+    <div class="dlg-actions">
+      <button type="button" id="settingsTest">测试连接</button>
+      <button type="button" id="settingsCancel">取消</button>
+      <button class="primary" value="save">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY = 'my-nav-links-v1';
+const grid      = document.getElementById('grid');
+const search    = document.getElementById('search');
+const dlg       = document.getElementById('dlg');
+const form      = document.getElementById('form');
+const fName     = document.getElementById('fName');
+const fUrl      = document.getElementById('fUrl');
+const dlgTitle  = document.getElementById('dlgTitle');
+const importFile= document.getElementById('importFile');
+
+let editingId = null;
+let query = '';
+let isEditing = false;
+let pressTimer = null;
+let pressCard = null;
+let pressStart = null;
+let suppressClick = false;
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function hueOf(str){
+  let h = 0;
+  for (const ch of str) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return h % 360;
+}
+function iconStyle(name){
+  const h = hueOf(name);
+  return `background:hsl(${h} 70% 94%);color:hsl(${h} 55% 42%)`;
+}
+function hostOf(url){
+  try { return new URL(url).hostname; } catch (e) { return ''; }
+}
+function faviconSources(host){
+  if (!host) return [];
+  return [
+    `https://favicon.im/${host}?larger=true`,
+    `https://api.iowen.cn/favicon/${host}.png`,
+    `https://icons.duckduckgo.com/ip3/${host}.ico`,
+    `https://www.google.com/s2/favicons?domain=${host}&sz=64`
+  ];
+}
+
+/* ================= 本地数据 ================= */
+function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return [
+    { id: uid(), name: '百度',    url: 'https://www.baidu.com' },
+    { id: uid(), name: '哔哩哔哩', url: 'https://www.bilibili.com' },
+    { id: uid(), name: '知乎',    url: 'https://www.zhihu.com' },
+    { id: uid(), name: 'GitHub',  url: 'https://github.com' },
+    { id: uid(), name: 'MDN',     url: 'https://developer.mozilla.org' }
+  ];
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(links)); } catch (e) {}
+}
+
+let links = load();
+
+function render(){
+  const q = query.trim().toLowerCase();
+  const list = q
+    ? links.filter(l => l.name.toLowerCase().includes(q) || l.url.toLowerCase().includes(q))
+    : links;
+
+  if (!list.length){
+    grid.innerHTML = '<p class="empty">暂无匹配的网址</p>';
+    return;
+  }
+
+  grid.innerHTML = list.map(item => {
+    const ch   = (item.name.trim()[0] || '?').toUpperCase();
+    const host = hostOf(item.url);
+    const srcs = faviconSources(host);
+    const img  = srcs.length
+      ? `<img class="favicon" src="${esc(srcs[0])}" alt="" loading="lazy"
+              referrerpolicy="no-referrer"
+              data-host="${esc(host)}" data-i="0">`
+      : '';
+    return `
+      <div class="card" data-id="${item.id}">
+        <div class="btn-del" data-act="del" title="删除">×</div>
+        <div class="sort-actions">
+          <button class="btn-left" data-act="move-left" title="左移">←</button>
+          <button class="btn-right" data-act="move-right" title="右移">→</button>
+        </div>
+        <a href="${esc(item.url)}" target="_blank" rel="noreferrer" title="${esc(item.name)}">
+          <span class="icon" style="${iconStyle(item.name)}">
+            <span class="icon-letter">${esc(ch)}</span>
+            ${img}
+          </span>
+          <span class="name">${esc(item.name)}</span>
+        </a>
+      </div>`;
+  }).join('');
+
+  bindFavicons();
+}
+
+function bindFavicons(){
+  grid.querySelectorAll('img.favicon').forEach(img => {
+    const letter = img.parentElement.querySelector('.icon-letter');
+    img.addEventListener('load', () => {
+      if (img.naturalWidth === 0) return;
+      if (letter) letter.style.visibility = 'hidden';
+    });
+    img.addEventListener('error', () => {
+      const host = img.dataset.host;
+      const list = faviconSources(host);
+      let i = parseInt(img.dataset.i || '0', 10) + 1;
+      if (i < list.length){
+        img.dataset.i = i;
+        img.src = list[i];
+      } else {
+        img.remove();
+      }
+    });
+  });
+}
+
+/* ================= Toast 提示 ================= */
+let toastTimer;
+function toast(msg){
+  let el = document.getElementById('toast');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+/* ================= GitHub 同步 ================= */
+const GH_CFG_KEY = 'my-nav-gh-v1';
+let ghConfig = (() => {
+  const def = { owner:'', repo:'', branch:'main', path:'links.json', token:'' };
+  try {
+    const raw = localStorage.getItem(GH_CFG_KEY);
+    if (raw) return Object.assign(def, JSON.parse(raw));
+  } catch (e) {}
+  return def;
+})();
+
+function saveGhConfig(){
+  try { localStorage.setItem(GH_CFG_KEY, JSON.stringify(ghConfig)); } catch (e) {}
+}
+function ghReady(){
+  return !!(ghConfig.owner && ghConfig.repo && ghConfig.token);
+}
+function ghApiUrl(cfg, withRef){
+  const owner = encodeURIComponent(cfg.owner);
+  const repo  = encodeURIComponent(cfg.repo);
+  const path  = cfg.path.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  let url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  if (withRef) url += `?ref=${encodeURIComponent(cfg.branch)}`;
+  return url;
+}
+function ghHeaders(cfg, json){
+  const h = {
+    'Authorization': 'Bearer ' + cfg.token,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+  if (json) h['Content-Type'] = 'application/json';
+  return h;
+}
+function bytesToBase64(bytes){
+  let bin = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk){
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+function base64ToBytes(b64){
+  const bin = atob(String(b64).replace(/\s/g, ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function ghGetFile(cfg = ghConfig){
+  const res = await fetch(ghApiUrl(cfg, true), { headers: ghHeaders(cfg, false) });
+  if (res.status === 404) return null;
+  if (!res.ok){
+    let msg = res.statusText;
+    try { const e = await res.json(); msg = e.message || msg; } catch (_) {}
+    throw new Error(`读取失败（HTTP ${res.status}）：${msg}`);
+  }
+  const data = await res.json();
+  if (Array.isArray(data)) throw new Error('配置的路径是一个目录，请指定具体文件');
+  return {
+    sha: data.sha,
+    content: new TextDecoder().decode(base64ToBytes(data.content))
+  };
+}
+
+async function ghPutFile(content, sha, message, cfg = ghConfig){
+  const body = {
+    message: message || `更新导航数据 ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`,
+    content: bytesToBase64(new TextEncoder().encode(content)),
+    branch: cfg.branch
+  };
+  if (sha) body.sha = sha;
+  const res = await fetch(ghApiUrl(cfg, false), {
+    method: 'PUT',
+    headers: ghHeaders(cfg, true),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok){
+    let msg = res.statusText;
+    try { const e = await res.json(); msg = e.message || msg; } catch (_) {}
+    throw new Error(`写入失败（HTTP ${res.status}）：${msg}`);
+  }
+  return res.json();
+}
+
+function updateGhStatus(){
+  const el = document.getElementById('ghStatus');
+  if (!el) return;
+  if (ghReady()){
+    el.textContent = `· GitHub 同步已配置：${ghConfig.owner}/${ghConfig.repo}@${ghConfig.branch} (${ghConfig.path})`;
+    el.style.color = '#3a9e5a';
+  } else {
+    el.textContent = '· 未配置 GitHub 同步（点击右上角 ⚙️ 设置）';
+    el.style.color = '';
+  }
+}
+
+/* ================= 导入 / 导出 ================= */
+function downloadLocal(){
+  const dataStr = JSON.stringify(links, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  const date = new Date();
+  const ymd = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
+
+  a.href = url;
+  a.download = `我的导航备份_${ymd}.json`;
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
+function applyImported(parsed){
+  if (!Array.isArray(parsed)) throw new Error('数据格式错误，必须为数组');
+  const newLinks = [];
+  parsed.forEach(item => {
+    if (item && typeof item.name === 'string' && typeof item.url === 'string'){
+      newLinks.push({
+        id: item.id || uid(),
+        name: item.name.trim(),
+        url: item.url.trim()
+      });
+    }
+  });
+  if (!newLinks.length) throw new Error('未找到有效的网址数据');
+  links = newLinks;
+  save();
+  render();
+}
+
+document.getElementById('exportBtn').onclick = async () => {
+  exitEditMode();
+
+  if (!ghReady()){
+    downloadLocal();
+    toast('未配置 GitHub，已下载到本地');
+    return;
+  }
+
+  if (!confirm('将当前数据同步到 GitHub 仓库？\n\n点击"取消"可改为下载到本地。')){
+    downloadLocal();
+    return;
+  }
+
+  const btn = document.getElementById('exportBtn');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '同步中…';
+  try {
+    const prev = await ghGetFile();
+    if (prev){
+      try {
+        const prevData = JSON.parse(prev.content);
+        if (JSON.stringify(prevData) === JSON.stringify(links)){
+          toast('数据无变化，已跳过同步');
+          return;
+        }
+      } catch (_) { /* 忽略解析失败，正常写入 */ }
+    }
+    await ghPutFile(JSON.stringify(links, null, 2), prev ? prev.sha : null);
+    toast('已同步到 GitHub 仓库 ✅');
+  } catch (err) {
+    alert('同步到 GitHub 失败：\n' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+};
+
+document.getElementById('importBtn').onclick = async () => {
+  exitEditMode();
+
+  if (!ghReady()){
+    importFile.click();
+    return;
+  }
+
+  if (!confirm('将从 GitHub 仓库读取数据并覆盖当前内容。\n\n点击"取消"可改为从本地文件导入。')){
+    importFile.click();
+    return;
+  }
+
+  const btn = document.getElementById('importBtn');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '读取中…';
+  try {
+    const file = await ghGetFile();
+    if (!file) throw new Error(`仓库中未找到文件：${ghConfig.path}`);
+    const parsed = JSON.parse(file.content);
+    applyImported(parsed);
+    toast(`成功从 GitHub 导入 ${links.length} 条数据！`);
+  } catch (err) {
+    alert('从 GitHub 导入失败：\n' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+};
+
+importFile.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!confirm('导入将覆盖当前所有数据，确定继续吗？')){
+    importFile.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      applyImported(JSON.parse(evt.target.result));
+      toast(`成功导入 ${links.length} 条数据！`);
+    } catch (err) {
+      alert('导入失败：' + err.message);
+    }
+    importFile.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ================= 设置对话框 ================= */
+const settingsDlg = document.getElementById('settingsDlg');
+const settingsForm = document.getElementById('settingsForm');
+const gOwner = document.getElementById('gOwner');
+const gRepo  = document.getElementById('gRepo');
+const gBranch= document.getElementById('gBranch');
+const gPath  = document.getElementById('gPath');
+const gToken = document.getElementById('gToken');
+
+document.getElementById('settingsBtn').onclick = () => {
+  exitEditMode();
+  gOwner.value  = ghConfig.owner;
+  gRepo.value   = ghConfig.repo;
+  gBranch.value = ghConfig.branch || 'main';
+  gPath.value   = ghConfig.path || 'links.json';
+  gToken.value  = ghConfig.token;
+  settingsDlg.showModal();
+};
+
+document.getElementById('settingsCancel').onclick = () => settingsDlg.close();
+
+settingsForm.addEventListener('submit', () => {
+  ghConfig = {
+    owner:  gOwner.value.trim(),
+    repo:   gRepo.value.trim(),
+    branch: gBranch.value.trim() || 'main',
+    path:   (gPath.value.trim().replace(/^\/+/, '') || 'links.json'),
+    token:  gToken.value.trim()
+  };
+  saveGhConfig();
+  updateGhStatus();
+  toast(ghReady() ? '已保存 GitHub 同步设置' : '设置已保存（尚未配置完整）');
+});
+
+document.getElementById('settingsTest').onclick = async (e) => {
+  const cfg = {
+    owner:  gOwner.value.trim(),
+    repo:   gRepo.value.trim(),
+    branch: gBranch.value.trim() || 'main',
+    path:   (gPath.value.trim().replace(/^\/+/, '') || 'links.json'),
+    token:  gToken.value.trim()
+  };
+  if (!cfg.owner || !cfg.repo || !cfg.token){
+    alert('请先填写 Owner、仓库名和 Token');
+    return;
+  }
+  const btn = e.currentTarget;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '测试中…';
+  try {
+    const f = await ghGetFile(cfg);
+    if (f) toast('连接成功：文件已存在');
+    else   toast('连接成功：文件不存在，首次导出时会自动创建');
+  } catch (err) {
+    alert('连接失败：\n' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+};
+
+/* ================= 长按与编辑模式 ================= */
+function enterEditMode(card){
+  if (isEditing) return;
+  isEditing = true;
+  grid.classList.add('editing');
+  if (card) card.classList.add('active');
+  if (navigator.vibrate) navigator.vibrate(50);
+}
+
+function exitEditMode(){
+  if (!isEditing) return;
+  isEditing = false;
+  grid.classList.remove('editing');
+  grid.querySelectorAll('.card.active').forEach(c => c.classList.remove('active'));
+}
+
+function cancelPress(){
+  if (pressTimer){
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+  if (pressCard){
+    pressCard.classList.remove('active');
+    pressCard = null;
+  }
+}
+
+grid.addEventListener('pointerdown', e => {
+  if (isEditing) return;
+  if (suppressClick) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+  const card = e.target.closest('.card');
+  if (!card) return;
+
+  grid.querySelectorAll('.card[data-longpress]').forEach(c => delete c.dataset.longpress);
+
+  cancelPress();
+  pressCard = card;
+  pressStart = { x: e.clientX, y: e.clientY };
+
+  pressTimer = setTimeout(() => {
+    pressTimer = null;
+    if (!pressCard) return;
+    pressCard.dataset.longpress = '1';
+    enterEditMode(pressCard);
+    pressCard = null;
+  }, 600);
+});
+
+grid.addEventListener('pointermove', e => {
+  if (!pressTimer || !pressStart) return;
+  const dx = e.clientX - pressStart.x;
+  const dy = e.clientY - pressStart.y;
+  if (Math.hypot(dx, dy) > 10) cancelPress();
+});
+
+grid.addEventListener('pointerup', () => {
+  if (pressTimer) cancelPress();
+});
+
+grid.addEventListener('pointercancel', () => {
+  if (pressTimer) cancelPress();
+});
+
+grid.addEventListener('click', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+
+  if (card.dataset.longpress === '1'){
+    e.preventDefault();
+    e.stopPropagation();
+    delete card.dataset.longpress;
+    return;
+  }
+
+  if (isEditing && !e.target.closest('.btn-del') && !e.target.closest('.sort-actions')) {
+    e.preventDefault();
+    e.stopPropagation();
+    openDialog(card.dataset.id);
+  }
+});
+
+grid.addEventListener('contextmenu', e => e.preventDefault());
+
+grid.addEventListener('click', e => {
+  const btn = e.target.closest('button, .btn-del');
+  if (!btn || !isEditing) return;
+
+  const card = btn.closest('.card');
+  const id = card.dataset.id;
+  const act = btn.dataset.act;
+
+  e.stopPropagation();
+
+  if (act === 'del'){
+    if (confirm('确定删除这个网址吗？')){
+      links = links.filter(l => l.id !== id);
+      save();
+      render();
+      if (isEditing) grid.classList.add('editing');
+    }
+  }
+  else if (act === 'move-left' || act === 'move-right'){
+    const index = links.findIndex(l => l.id === id);
+    if (index === -1) return;
+
+    if (act === 'move-left' && index > 0){
+      [links[index - 1], links[index]] = [links[index], links[index - 1]];
+    }
+    else if (act === 'move-right' && index < links.length - 1){
+      [links[index + 1], links[index]] = [links[index], links[index + 1]];
+    }
+
+    save();
+    render();
+    if (isEditing) grid.classList.add('editing');
+  }
+});
+
+document.addEventListener('pointerdown', e => {
+  if (!isEditing) return;
+  if (!e.target.closest('.card') && !e.target.closest('dialog') && !e.target.closest('header')) {
+    exitEditMode();
+    suppressClick = true;
+  }
+}, true);
+
+document.addEventListener('click', e => {
+  if (suppressClick){
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClick = false;
+  }
+}, true);
+
+window.addEventListener('scroll', () => {
+  if (isEditing) exitEditMode();
+}, true);
+
+/* ================= 添加 / 编辑弹窗 ================= */
+function openDialog(id){
+  editingId = id;
+  const item = id ? links.find(l => l.id === id) : null;
+  dlgTitle.textContent = item ? '编辑网址' : '添加网址';
+  fName.value = item ? item.name : '';
+  fUrl.value  = item ? item.url  : '';
+  dlg.showModal();
+  fName.focus();
+}
+
+document.getElementById('addBtn').onclick = () => {
+  exitEditMode();
+  openDialog(null);
+};
+document.getElementById('cancelBtn').onclick = () => dlg.close();
+
+form.addEventListener('submit', () => {
+  const name = fName.value.trim();
+  let url = fUrl.value.trim();
+  if (!name || !url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  if (editingId){
+    const it = links.find(l => l.id === editingId);
+    if (it){ it.name = name; it.url = url; }
+  } else {
+    links.unshift({ id: uid(), name, url });
+  }
+  save();
+  render();
+  if (isEditing) grid.classList.add('editing');
+});
+
+/* ================= 搜索 ================= */
+search.addEventListener('input', e => {
+  exitEditMode();
+  query = e.target.value;
+  render();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT'){
+    e.preventDefault();
+    search.focus();
+  }
+});
+
+/* ================= 启动 ================= */
+render();
+updateGhStatus();
+</script>
+</body>
+</html>
